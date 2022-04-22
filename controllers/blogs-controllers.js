@@ -9,7 +9,7 @@ const User = require('../models/user-model');
 exports.getAllBlogs = async (req, res, next) => {
 	let blogs;
 	try {
-		blogs = await Blog.find({});
+		blogs = await Blog.find({}).populate('creator', 'name').sort({updatedAt:-1});
 	} catch (err) {
 		const error = new HttpError(
 			'Get blog failed, please try again.',
@@ -17,7 +17,7 @@ exports.getAllBlogs = async (req, res, next) => {
 		);
 		return next(error);
 	}
-	res.json({ blogs: blogs });
+	res.json({ blogs: blogs.map(blog => blog.toObject({ getters: true })) });
 };
 
 // /api/blogs => POST
@@ -84,7 +84,8 @@ exports.getBlogDetail = async (req, res, next) => {
 
 	let blog;
 	try {
-		blog = await Blog.findById(blogId);
+		blog = await Blog.findById(blogId)
+			.populate('creator', 'name avatar');
 	} catch (err) {
 		const error = new HttpError(
 			'Something went wrong, could not find a blog.',

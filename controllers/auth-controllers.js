@@ -13,7 +13,7 @@ exports.signup = async (req, res, next) => {
 		return next(new HttpError(firstError[0].msg, 422));
 	}
 
-	const { name, email, password} = req.body;
+	const { name, email, password } = req.body;
 
 	let existingUser;
 	try {
@@ -88,7 +88,7 @@ exports.login = async (req, res, next) => {
 	if (!existingUser) {
 		return next(
 			new HttpError(
-				'Could not identify user, credentials seem to be wrong.',
+				'Could not identify user. Email or Password does not match.',
 				401
 			)
 		);
@@ -110,11 +110,14 @@ exports.login = async (req, res, next) => {
 	if (!matchPassword) {
 		return next(
 			new HttpError(
-				'Could not identify user, credentials seem to be wrong.',
+				'Could not identify user. Email or Password does not match.',
 				401
 			)
 		);
 	}
 
-	res.json({ message: 'Log in successfully!!!' });
+	res.json({
+		message: 'Log in successfully!!!',
+		user: existingUser.toObject({ getters: true }),
+	});
 };
