@@ -2,9 +2,11 @@ const router = require('express').Router();
 const { check } = require('express-validator');
 
 const { signup, login } = require('../controllers/auth-controllers');
+const fileUpload = require('../middleware/file-upload');
 
 router.post(
 	'/signup',
+	fileUpload.single('avatar'),
 	[
 		check('name')
 			.not()

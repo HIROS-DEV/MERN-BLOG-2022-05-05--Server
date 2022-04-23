@@ -1,5 +1,8 @@
 require('colors');
 
+const fs = require('fs');
+const path = require('path');
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -14,6 +17,11 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 
 app.use(bodyParser.json());
+app.use(
+	'/uploads/images',
+	express.static(path.join('uploads', 'images'))
+);
+
 app.use((req, res, next) => {
 	res.setHeader('Access-Control-Allow-Origin', '*');
 	res.setHeader(
@@ -36,6 +44,14 @@ app.use((req, res, next) => {
 });
 
 app.use((error, req, res, next) => {
+	/*****  When image upload failed, image don't save upload folder *****/
+	if (req.file) {
+		fs.unlink(req.file.path, (err) => {
+			console.log(err);
+		});
+	}
+	/*********************************************************************/
+
 	if (res.headersSent) {
 		return next(error);
 	}

@@ -1,6 +1,8 @@
-const { validationResult } = require('express-validator');
-const HttpError = require('../models/http-error');
+const fs = require('fs');
 const mongoose = require('mongoose');
+const { validationResult } = require('express-validator');
+
+const HttpError = require('../models/http-error');
 
 const Blog = require('../models/blog-model');
 const User = require('../models/user-model');
@@ -9,7 +11,9 @@ const User = require('../models/user-model');
 exports.getAllBlogs = async (req, res, next) => {
 	let blogs;
 	try {
-		blogs = await Blog.find({}).populate('creator', 'name').sort({updatedAt:-1});
+		blogs = await Blog.find({})
+			.populate('creator', 'name avatar')
+			.sort({ updatedAt: -1 });
 	} catch (err) {
 		const error = new HttpError(
 			'Get blog failed, please try again.',
@@ -17,7 +21,9 @@ exports.getAllBlogs = async (req, res, next) => {
 		);
 		return next(error);
 	}
-	res.json({ blogs: blogs.map(blog => blog.toObject({ getters: true })) });
+	res.json({
+		blogs: blogs.map((blog) => blog.toObject({ getters: true })),
+	});
 };
 
 // /api/blogs => POST
@@ -33,8 +39,7 @@ exports.createBlog = async (req, res, next) => {
 	const createdBlog = new Blog({
 		title,
 		description,
-		image:
-			'https://images.unsplash.com/photo-1507297448044-a99b358cd06e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1568&q=80',
+		image: req.file.path,
 		creator,
 	});
 
@@ -84,8 +89,10 @@ exports.getBlogDetail = async (req, res, next) => {
 
 	let blog;
 	try {
-		blog = await Blog.findById(blogId)
-			.populate('creator', 'name avatar');
+		blog = await Blog.findById(blogId).populate(
+			'creator',
+			'name avatar'
+		);
 	} catch (err) {
 		const error = new HttpError(
 			'Something went wrong, could not find a blog.',
@@ -166,12 +173,14 @@ exports.deleteBLOG = async (req, res, next) => {
 		);
 	}
 
+	const imagePath = blog.image;
+
 	try {
 		const sess = await mongoose.startSession();
 		sess.startTransaction();
 		await blog.remove({ session: sess });
 		blog.creator.blogs.pull(blog);
-		await blog.creator.save({session: sess});
+		await blog.creator.save({ session: sess });
 		await sess.commitTransaction();
 	} catch (err) {
 		const error = new HttpError(
@@ -180,6 +189,10 @@ exports.deleteBLOG = async (req, res, next) => {
 		);
 		return next(error);
 	}
+
+	fs.unlink(imagePath, err => {
+		console.log(err);
+	});
 
 	res.status(200).json({ message: 'Blog deleted successfully!!' });
 };

@@ -8,10 +8,12 @@ const {
 	updateBLOG,
 	deleteBLOG,
 } = require('../controllers/blogs-controllers');
+const fileUpload = require('../middleware/file-upload');
 
 router.get('/', getAllBlogs);
 router.post(
 	'/',
+	fileUpload.single('image'),
 	[
 		check('title')
 			.not()
