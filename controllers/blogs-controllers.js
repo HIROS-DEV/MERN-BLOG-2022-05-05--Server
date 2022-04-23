@@ -1,8 +1,10 @@
 const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 
 const HttpError = require('../models/http-error');
+const { cloudinary } = require('../config/cloudinary');
 
 const Blog = require('../models/blog-model');
 const User = require('../models/user-model');
@@ -174,7 +176,11 @@ exports.deleteBLOG = async (req, res, next) => {
 	}
 
 	const imagePath = blog.image;
-
+	
+	// Cloudinary can not delete image from URL. The function retrive filename. 
+	const getPublicId = (imageURL) =>
+		imageURL.split('/').pop().split('.')[0];
+	
 	try {
 		const sess = await mongoose.startSession();
 		sess.startTransaction();
@@ -190,9 +196,24 @@ exports.deleteBLOG = async (req, res, next) => {
 		return next(error);
 	}
 
-	fs.unlink(imagePath, err => {
-		console.log(err);
-	});
+	/********* Delete image from local uploads folder. But do not need cloudinary version **********/
+	// fs.unlink(imagePath, (err) => {
+	// 	console.log(err);
+	// });
+	/*********************************************************************************************************/
+
+	try {
+		// Cloudinary needs to know public id (FolderName/Filename) for delete image. 
+		await cloudinary.uploader.destroy(
+			`MERN-BLOG/${getPublicId(imagePath)}`
+		);
+	} catch (err) {
+		const error = new HttpError(
+			'Something went wrong, could not delete a image.',
+			500
+		);
+		return next(error);
+	}
 
 	res.status(200).json({ message: 'Blog deleted successfully!!' });
 };
