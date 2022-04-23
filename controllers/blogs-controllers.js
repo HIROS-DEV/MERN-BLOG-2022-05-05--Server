@@ -38,17 +38,17 @@ exports.createBlog = async (req, res, next) => {
 		return next(new HttpError(firstError[0].msg, 422));
 	}
 
-	const { title, description, creator } = req.body;
+	const { title, description } = req.body;
 	const createdBlog = new Blog({
 		title,
 		description,
 		image: req.file.path,
-		creator,
+		creator: req.userData.userId
 	});
 
 	let user;
 	try {
-		user = await User.findById(creator);
+		user = await User.findById(req.userData.userId);
 	} catch (err) {
 		const error = new HttpError(
 			'Creating blog failed, please try again.',
