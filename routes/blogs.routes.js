@@ -9,8 +9,13 @@ const {
 	deleteBLOG,
 } = require('../controllers/blogs-controllers');
 const fileUpload = require('../middleware/file-upload');
+const checkAuth = require('../middleware/check-auth');
 
 router.get('/', getAllBlogs);
+router.get('/:blogId', getBlogDetail);
+
+router.use(checkAuth);
+
 router.post(
 	'/',
 	fileUpload.single('image'),
@@ -33,7 +38,6 @@ router.post(
 	createBlog
 );
 
-router.get('/:blogId', getBlogDetail);
 router.patch(
 	'/:blogId',
 	[

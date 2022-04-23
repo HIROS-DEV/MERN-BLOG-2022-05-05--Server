@@ -1,5 +1,6 @@
-const fs = require('fs');
-const path = require('path');
+// const fs = require('fs');
+// const path = require('path');
+
 const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 
@@ -135,6 +136,14 @@ exports.updateBLOG = async (req, res, next) => {
 		return next(error);
 	}
 
+	if (!updatedBlog.creator.equals(req.userData.userId)) {
+		const error = new HttpError(
+			'You are not allowed to edit this blog.',
+			401
+		);
+		return next(error);
+	}
+
 	updatedBlog.title = title;
 	updatedBlog.description = description;
 
@@ -175,12 +184,20 @@ exports.deleteBLOG = async (req, res, next) => {
 		);
 	}
 
+	if (blog.creator.id !== req.userData.userId) {
+		const error = new HttpError(
+			'You are not allowed to delete this blog.',
+			401
+		);
+		return next(error);
+	}
+
 	const imagePath = blog.image;
-	
-	// Cloudinary can not delete image from URL. The function retrive filename. 
+
+	// Cloudinary can not delete image from URL. The function retrive filename.
 	const getPublicId = (imageURL) =>
 		imageURL.split('/').pop().split('.')[0];
-	
+
 	try {
 		const sess = await mongoose.startSession();
 		sess.startTransaction();
@@ -203,7 +220,7 @@ exports.deleteBLOG = async (req, res, next) => {
 	/*********************************************************************************************************/
 
 	try {
-		// Cloudinary needs to know public id (FolderName/Filename) for delete image. 
+		// Cloudinary needs to know public id (FolderName/Filename) for delete image.
 		await cloudinary.uploader.destroy(
 			`MERN-BLOG/${getPublicId(imagePath)}`
 		);

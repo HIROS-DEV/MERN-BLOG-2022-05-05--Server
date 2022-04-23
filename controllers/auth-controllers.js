@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const HttpError = require('../models/http-error');
 const User = require('../models/user-model');
@@ -63,9 +64,27 @@ exports.signup = async (req, res, next) => {
 		return next(error);
 	}
 
+	let token;
+	try {
+		token = jwt.sign(
+			{ userId: createdUser.id, email: createdUser.email },
+			process.env.JWT_SECRET,
+			{ expiresIn: '1h' }
+		);
+	} catch (err) {
+		const error = new HttpError(
+			'Signing up failed, please try again.',
+			500
+		);
+		return next(error);
+	}
+
 	res.status(201).json({
 		message: 'User created successfully!!!',
-		user: createdUser.toObject({ getters: true }),
+		// user: createdUser.toObject({ getters: true }),
+		userId: createdUser.id,
+		email: createdUser.email,
+		token: token,
 	});
 };
 
@@ -115,8 +134,26 @@ exports.login = async (req, res, next) => {
 		);
 	}
 
+	let token;
+	try {
+		token = jwt.sign(
+			{ userId: existingUser.id, email: existingUser.email },
+			process.env.JWT_SECRET,
+			{ expiresIn: '1h' }
+		);
+	} catch (err) {
+		const error = new HttpError(
+			'Logging in failed, please try again.',
+			500
+		);
+		return next(error);
+	}
+
 	res.json({
 		message: 'Log in successfully!!!',
-		user: existingUser.toObject({ getters: true }),
+		// user: existingUser.toObject({ getters: true }),
+		userId: existingUser.id,
+		email: existingUser.email,
+		token: token,
 	});
 };
