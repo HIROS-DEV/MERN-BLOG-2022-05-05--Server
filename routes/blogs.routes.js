@@ -32,7 +32,7 @@ router.post(
 			.withMessage('Description must not be empty.')
 			.isLength({ max: 300000, min: 5 })
 			.withMessage(
-				'Description must be more than 5 characters and less than 300000'
+				'Description must be more than 5 characters'
 			),
 	],
 	createBlog
@@ -53,7 +53,7 @@ router.patch(
 			.withMessage('Description must not be empty.')
 			.isLength({ max: 300000, min: 5 })
 			.withMessage(
-				'Description must be more than 5 characters and less than 300000 characters'
+				'Description must be more than 5 characters'
 			),
 	],
 	updateBLOG

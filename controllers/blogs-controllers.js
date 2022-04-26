@@ -35,6 +35,7 @@ exports.createBlog = async (req, res, next) => {
 
 	if (!errors.isEmpty()) {
 		const firstError = errors.array({ onlyFirstError: true });
+		
 		return next(new HttpError(firstError[0].msg, 422));
 	}
 
