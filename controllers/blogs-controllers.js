@@ -1,5 +1,5 @@
-// const fs = require('fs');
-// const path = require('path');
+const fs = require('fs');
+const path = require('path');
 
 const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
@@ -9,6 +9,7 @@ const { cloudinary } = require('../config/cloudinary');
 
 const Blog = require('../models/blog-model');
 const User = require('../models/user-model');
+const Comment = require('../models/comment-model');
 
 // /api/blogs => GET
 exports.getAllBlogs = async (req, res, next) => {
@@ -35,7 +36,7 @@ exports.createBlog = async (req, res, next) => {
 
 	if (!errors.isEmpty()) {
 		const firstError = errors.array({ onlyFirstError: true });
-		
+
 		return next(new HttpError(firstError[0].msg, 422));
 	}
 
@@ -44,7 +45,7 @@ exports.createBlog = async (req, res, next) => {
 		title,
 		description,
 		image: req.file.path,
-		creator: req.userData.userId
+		creator: req.userData.userId,
 	});
 
 	let user;
@@ -93,10 +94,43 @@ exports.getBlogDetail = async (req, res, next) => {
 
 	let blog;
 	try {
-		blog = await Blog.findById(blogId).populate(
-			'creator',
-			'name avatar'
+		blog = await Blog.findById(blogId)
+			.populate('creator', 'name avatar')
+			.populate({
+				path: 'comments',
+				populate: { path: 'creator', select: 'name avatar createdAt'},
+			});
+	} catch (err) {
+		const error = new HttpError(
+			'Something went wrong, could not find a blog.',
+			500
 		);
+		return next(error);
+	}
+
+	if (!blog) {
+		return next(
+			new HttpError('Could not find a blog for the provided id.', 404)
+		);
+	}
+
+	res.json({ blog: blog.toObject({ getters: true }) });
+};
+
+// /api/blogs/:blogId/comments => GET
+exports.getBlogDetailComments = async (req, res, next) => {
+	const blogId = req.params.blogId;
+
+	let blog;
+	try {
+		blog = await Blog.findById(blogId).select('comments')
+			.populate({
+				path: 'comments',
+				populate: {
+					path: 'creator',
+					select: 'name avatar createdAt',
+				},
+			});
 	} catch (err) {
 		const error = new HttpError(
 			'Something went wrong, could not find a blog.',
@@ -234,4 +268,126 @@ exports.deleteBLOG = async (req, res, next) => {
 	}
 
 	res.status(200).json({ message: 'Blog deleted successfully!!' });
+};
+
+// /api/blogs/:blogId/comment => POST
+exports.createComment = async (req, res, next) => {
+	const errors = validationResult(req);
+
+	if (!errors.isEmpty()) {
+		const firstError = errors.array({ onlyFirstError: true });
+		return next(new HttpError(firstError[0].msg, 422));
+	}
+
+	let blog;
+	try {
+		blog = await Blog.findById(req.params.blogId);
+	} catch (err) {
+		const error = new HttpError('Sorry, blog not found.', 404);
+		return next(error);
+	}
+
+	let user;
+	try {
+		user = await User.findById(req.userData.userId);
+	} catch (err) {
+		const error = new HttpError(
+			'Creating blog failed, please try again.',
+			500
+		);
+		return next(error);
+	}
+
+	if (!user) {
+		const error = new HttpError(
+			'Could not find user for provided id',
+			404
+		);
+		return next(error);
+	}
+
+	const createdComment = new Comment({
+		comment: req.body.comment,
+		creator: req.userData.userId,
+		blog: req.params.blogId,
+	});
+
+	try {
+		const sess = await mongoose.startSession();
+		sess.startTransaction();
+		await createdComment.save({ session: sess });
+		user.comments.push(createdComment);
+		blog.comments.push(createdComment);
+		await user.save({ session: sess });
+		await blog.save({ session: sess });
+		await sess.commitTransaction();
+	} catch (err) {
+		const error = new HttpError(
+			'Creating blog failed, please try again.',
+			500
+		);
+		return next(error);
+	}
+
+	res.status(200).json({ comment: createdComment });
+};
+
+// /api/blogs/:blogId/comment/:commentId => DELETE
+exports.deleteComment = async (req, res, next) => {
+	const commentId = req.params.commentId;
+
+	let blog;
+	try {
+		blog = await Blog.findById(req.params.blogId);
+	} catch (err) {
+		const error = new HttpError('Sorry, blog not found.', 404);
+		return next(error);
+	}
+
+	let comment;
+	try {
+		comment = await Comment.findById(commentId)
+			.populate('creator')
+			.populate('blog');
+	} catch (err) {
+		const error = new HttpError(
+			'Something went wrong, could not delete a comment.',
+			500
+		);
+		return next(error);
+	}
+
+	if (!comment) {
+		return next(
+			new HttpError('Could not find a comment for that id.', 404)
+		);
+	}
+
+	if (comment.creator.id !== req.userData.userId) {
+		const error = new HttpError(
+			'You are not allowed to delete this comment.',
+			401
+		);
+		return next(error);
+	}
+
+	try {
+		const sess = await mongoose.startSession();
+		sess.startTransaction();
+		await comment.remove({ session: sess });
+		comment.creator.blogs.pull(comment);
+		comment.creator.comments.pull(comment);
+		blog.comments.pull(comment);
+		await blog.save({ session: sess });
+		await comment.creator.save({ session: sess });
+		await sess.commitTransaction();
+	} catch (err) {
+		const error = new HttpError(
+			'Something went wrong, could not delete a comment.',
+			500
+		);
+		return next(error);
+	}
+
+	res.status(200).json({ message: 'Comment deleted successfully!!' });
 };

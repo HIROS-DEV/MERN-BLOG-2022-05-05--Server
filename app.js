@@ -6,6 +6,7 @@ const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const { cloudinary } = require('./config/cloudinary');
 
 const blogsRoutes = require('./routes/blogs.routes');
 const authRoutes = require('./routes/auth.routes');
@@ -43,14 +44,21 @@ app.use((req, res, next) => {
 	throw error;
 });
 
-app.use((error, req, res, next) => {
-	/*****  When image upload failed, image don't save upload folder *****/
+app.use(async (error, req, res, next) => {
 	if (req.file) {
-		fs.unlink(req.file.path, (err) => {
-			console.log(err);
-		});
+		/************************ in case of not using cloudinary ****************************/
+		// fs.unlink(req.file.path, (err) => {
+		// 	console.log(err);
+		// });
+		/*********************************************************************/
+
+		try {
+			const imagePath = req.file.path.split('/').pop().split('.')[0];
+			await cloudinary.uploader.destroy(`MERN-BLOG/${imagePath}`);
+		} catch (error) {
+			return next(error);
+		}
 	}
-	/*********************************************************************/
 
 	if (res.headersSent) {
 		return next(error);

@@ -81,7 +81,6 @@ exports.signup = async (req, res, next) => {
 
 	res.status(201).json({
 		message: 'User created successfully!!!',
-		// user: createdUser.toObject({ getters: true }),
 		userId: createdUser.id,
 		email: createdUser.email,
 		token: token,
