@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-
 const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 
@@ -98,7 +95,10 @@ exports.getBlogDetail = async (req, res, next) => {
 			.populate('creator', 'name avatar')
 			.populate({
 				path: 'comments',
-				populate: { path: 'creator', select: 'name avatar createdAt'},
+				populate: {
+					path: 'creator',
+					select: 'name avatar createdAt',
+				},
 			});
 	} catch (err) {
 		const error = new HttpError(
@@ -123,7 +123,8 @@ exports.getBlogDetailComments = async (req, res, next) => {
 
 	let blog;
 	try {
-		blog = await Blog.findById(blogId).select('comments')
+		blog = await Blog.findById(blogId)
+			.select('comments')
 			.populate({
 				path: 'comments',
 				populate: {
@@ -248,12 +249,6 @@ exports.deleteBLOG = async (req, res, next) => {
 		return next(error);
 	}
 
-	/********* Delete image from local uploads folder. But do not need cloudinary version **********/
-	// fs.unlink(imagePath, (err) => {
-	// 	console.log(err);
-	// });
-	/*********************************************************************************************************/
-
 	try {
 		// Cloudinary needs to know public id (FolderName/Filename) for delete image.
 		await cloudinary.uploader.destroy(
@@ -310,6 +305,7 @@ exports.createComment = async (req, res, next) => {
 		comment: req.body.comment,
 		creator: req.userData.userId,
 		blog: req.params.blogId,
+		responseTo: req.body.responseTo,
 	});
 
 	try {

@@ -5,6 +5,37 @@ const jwt = require('jsonwebtoken');
 const HttpError = require('../models/http-error');
 const User = require('../models/user-model');
 
+
+const axios = require('axios');
+
+function getRequestParams(email) {
+	const API_KEY = process.env.MAILCHIMP_API_KEY;
+	const LIST_ID = process.env.MAILCHIMP_LIST_ID;
+	const DATACENTER = process.env.MAILCHIMP_API_KEY.split('-')[1];
+
+	const url = `https://${DATACENTER}.api.mailchimp.com/3.0/lists/${LIST_ID}/members`;
+
+	const data = {
+		email_address: email,
+		status: 'pending',
+	};
+
+	const base64ApiKey = Buffer.from(`anystring:${API_KEY}`).toString(
+		'base64'
+	);
+	const headers = {
+		'Content-Type': 'application/json',
+		Authorization: `Basic ${base64ApiKey}`,
+	};
+
+	return {
+		url,
+		data,
+		headers,
+	};
+}
+
+
 // /api/auth/signup => POST
 exports.signup = async (req, res, next) => {
 	const errors = validationResult(req);
@@ -155,4 +186,38 @@ exports.login = async (req, res, next) => {
 		email: existingUser.email,
 		token: token,
 	});
+};
+
+// /api/newsletter => POST
+exports.subscribeNewsletter = async (req, res, next) => {
+	const errors = validationResult(req);
+
+	if (!errors.isEmpty()) {
+		const firstError = errors.array({ onlyFirstError: true });
+		return next(new HttpError(firstError[0].msg, 422));
+	}
+
+	const { email } = req.body;
+
+	try {
+		const { url, data, headers } = getRequestParams(email);
+
+		try {
+			await axios.post(url, data, { headers });
+		} catch (err) {
+			return res.status(400).json({
+				err: `Something went wrong. Perhaps, you subscribed newsletter already or you entered invalid email address. I used mailchimp service. And, mailchimp can not accept spam address (ex: test@gmail.com etc,etc...)`,
+			});
+		}
+
+		return res.status(201).json({
+			error: null,
+			message:
+				'I sended email for your address. Please check your inbox and confirm subscription.',
+		});
+	} catch (error) {
+		return res.status(400).json({
+			error: `Something went wrong. Perhaps, you subscribed newsletter already or you entered invalid email address. I used mailchimp service. And, mailchimp can not accept spam address (ex: test@gmail.com etc,etc...)`,
+		});
+	}
 };

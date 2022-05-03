@@ -15,6 +15,7 @@ const fileUpload = require('../middleware/file-upload');
 const checkAuth = require('../middleware/check-auth');
 
 router.get('/', getAllBlogs);
+
 router.get('/:blogId', getBlogDetail);
 router.get('/:blogId/comments', getBlogDetailComments);
 
@@ -49,8 +50,8 @@ router.post(
 			.not()
 			.isEmpty()
 			.withMessage('Comment must not be empty.')
-			.isLength({ max: 300000, min: 2 })
-			.withMessage('Comment must be more than 2 characters'),
+			.isLength({ max: 200, min: 2 })
+			.withMessage('Comment must be more than 2 and less than 500 characters.'),
 	],
 	createComment
 );

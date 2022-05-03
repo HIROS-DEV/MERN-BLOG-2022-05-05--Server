@@ -1,7 +1,11 @@
 const router = require('express').Router();
 const { check } = require('express-validator');
 
-const { signup, login } = require('../controllers/auth-controllers');
+const {
+	signup,
+	login,
+	subscribeNewsletter,
+} = require('../controllers/auth-controllers');
 const fileUpload = require('../middleware/file-upload');
 
 router.post(
@@ -34,6 +38,23 @@ router.post(
 	],
 	signup
 );
+
 router.post('/login', login);
+
+router.post(
+	'/newsletter',
+	check('email')
+		.not()
+		.isEmpty()
+		.withMessage('Email must not be empty.')
+		.normalizeEmail()
+		.isEmail()
+		.withMessage('Please enter valid an email address')
+		.isLength({ max: 200 })
+		.withMessage('Email must be within 200 characters')
+		.toLowerCase(),
+
+	subscribeNewsletter
+);
 
 module.exports = router;

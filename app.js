@@ -1,8 +1,6 @@
 require('colors');
 
-const fs = require('fs');
 const path = require('path');
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -10,6 +8,7 @@ const { cloudinary } = require('./config/cloudinary');
 
 const blogsRoutes = require('./routes/blogs.routes');
 const authRoutes = require('./routes/auth.routes');
+const newsLetterRoutes = require('./routes/newsletter.routes');
 
 const HttpError = require('./models/http-error');
 
@@ -23,7 +22,7 @@ app.use(
 	express.static(path.join('uploads', 'images'))
 );
 
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
 	res.setHeader('Access-Control-Allow-Origin', '*');
 	res.setHeader(
 		'Access-Control-Allow-Headers',
@@ -38,20 +37,15 @@ app.use((req, res, next) => {
 
 app.use('/api/blogs', blogsRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api', newsLetterRoutes);
 
-app.use((req, res, next) => {
+app.use((_req, _res, _next) => {
 	const error = new HttpError('Could not find this routes.', 404);
 	throw error;
 });
 
 app.use(async (error, req, res, next) => {
 	if (req.file) {
-		/************************ in case of not using cloudinary ****************************/
-		// fs.unlink(req.file.path, (err) => {
-		// 	console.log(err);
-		// });
-		/*********************************************************************/
-
 		try {
 			const imagePath = req.file.path.split('/').pop().split('.')[0];
 			await cloudinary.uploader.destroy(`MERN-BLOG/${imagePath}`);

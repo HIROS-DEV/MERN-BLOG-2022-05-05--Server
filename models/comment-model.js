@@ -11,8 +11,7 @@ const commentSchema = new Schema(
 			ref: 'Blog',
 		},
 		responseTo: {
-			type: Schema.Types.ObjectId,
-			ref: 'User',
+			type: String,
 		},
 		comment: {
 			type: String,
