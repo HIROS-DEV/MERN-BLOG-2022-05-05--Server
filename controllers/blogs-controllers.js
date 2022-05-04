@@ -11,8 +11,23 @@ const Comment = require('../models/comment-model');
 // /api/blogs => GET
 exports.getAllBlogs = async (req, res, next) => {
 	let blogs;
+
+	const page = parseInt(req.query.page) || 1;
+	const pageSize = parseInt(req.query.limit) || 5;
+	const skip = (page - 1) * pageSize;
+	let pages;
+
 	try {
+		const total = await Blog.countDocuments();
+		pages = Math.ceil(total / pageSize);
+
+		if (page > pages) {
+			return res.status(404).json({message: "Sorry, page not found..."})
+		}
+
 		blogs = await Blog.find({})
+			.limit(pageSize)
+			.skip(skip)
 			.populate('creator', 'name avatar')
 			.sort({ updatedAt: -1 });
 	} catch (err) {
@@ -22,8 +37,12 @@ exports.getAllBlogs = async (req, res, next) => {
 		);
 		return next(error);
 	}
+
 	res.json({
 		blogs: blogs.map((blog) => blog.toObject({ getters: true })),
+		count: blogs.length,
+		pages,
+		page
 	});
 };
 
