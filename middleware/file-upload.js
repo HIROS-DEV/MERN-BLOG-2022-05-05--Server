@@ -1,6 +1,4 @@
 const multer = require('multer');
-// const uuid = require('uuid').v1;
-
 const { storage } = require('../config/cloudinary');
 
 const MIME_TYPE_MAP = {
