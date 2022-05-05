@@ -30,8 +30,8 @@ And, nodemon.json file in the server side.
 REACT_APP_MAPBOX_TOKEN= "your mapbox token here" <br/>
 REACT_APP_BACKEND_URL= "your server side url here" <br/>
 
--Server Side(nodemon.json)-
-{
+-Server Side(nodemon.json)- <br/>
+{<br/>
     "env": {
         "MONGO_USERNAME": "your mongodb usename here", <br/>
         "MONGO_PASSWORD": "your mongodb password here", <br/>
